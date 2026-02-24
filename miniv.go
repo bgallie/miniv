@@ -16,6 +16,7 @@ package miniv
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,56 +69,56 @@ func (c *Miniv) SetConfigPath(configPath string) {
 
 // GetConfigPath returns the configuration file path.
 // Default is current working directory.
-func (c *Miniv) GetConfigPath() string {
-	return c.configPath
+func (v *Miniv) GetConfigPath() string {
+	return v.configPath
 }
 
 // SetConfigFile sets the configuration file name.
 // Default is "config.toml".
-func (c *Miniv) SetConfigFile(configFile string) {
-	c.configFile = configFile
+func (v *Miniv) SetConfigFile(configFile string) {
+	v.configFile = configFile
 }
 
 // GetConfigFile returns the configuration file name.
 // Default is "config.toml".
-func (c *Miniv) GetConfigFile() string {
-	return c.configFile
+func (v *Miniv) GetConfigFile() string {
+	return v.configFile
 }
 
 // SetEnvPrefix sets the environment variable prefix.
 // Default is empty string.
-func (c *Miniv) SetEnvPrefix(envPrefix string) {
-	c.envPrefix = envPrefix
+func (v *Miniv) SetEnvPrefix(envPrefix string) {
+	v.envPrefix = envPrefix
 }
 
 // GetEnvPrefix returns the environment variable prefix.
 // Default is empty string.
-func (c *Miniv) GetEnvPrefix() string {
-	return c.envPrefix
+func (v *Miniv) GetEnvPrefix() string {
+	return v.envPrefix
 }
 
 // SetEmptyEnvVarValid sets whether empty environment variables are considered
 // valid.
-func (c *Miniv) SetEmptyEnvVarValid(valid bool) {
-	c.emptyEnvVarValid = valid
+func (v *Miniv) SetEmptyEnvVarValid(valid bool) {
+	v.emptyEnvVarValid = valid
 }
 
 // GetEmptyEnvVarValid returns whether empty environment variables are
 // considered valid.
-func (c *Miniv) GetEmptyEnvVarValid() bool {
-	return c.emptyEnvVarValid
+func (v *Miniv) GetEmptyEnvVarValid() bool {
+	return v.emptyEnvVarValid
 }
 
 // SetValue sets a value for a key.
 // If the key already exists, it overwrites the existing value.
-func (c *Miniv) SetValue(key string, value any) {
-	c.setvalues[key] = value
+func (v *Miniv) SetValue(key string, value any) {
+	v.setvalues[key] = value
 }
 
 // GetValue returns the set value for a key.
 // If the key does not exist, returns nil and false.
-func (c *Miniv) GetValue(key string) (any, bool) {
-	val, exists := c.setvalues[key]
+func (v *Miniv) GetValue(key string) (any, bool) {
+	val, exists := v.setvalues[key]
 	return val, exists
 }
 
@@ -169,8 +170,8 @@ func (c *Miniv) BindFlags(flagSet *pflag.FlagSet) {
 
 // GetBoundFlag returns the bound flag for a key.
 // If the key does not exist, returns nil and false.
-func (c *Miniv) GetBoundFlag(key string) (*pflag.Flag, bool) {
-	val, exists := c.boundFlags[key]
+func (v *Miniv) GetBoundFlag(key string) (*pflag.Flag, bool) {
+	val, exists := v.boundFlags[key]
 	if !exists {
 		return nil, false
 	}
@@ -180,8 +181,8 @@ func (c *Miniv) GetBoundFlag(key string) (*pflag.Flag, bool) {
 
 // GetBoundFlagValue returns the value of a bound flag for a key.
 // If the key does not exist or the flag is not changed, returns nil and false.
-func (c *Miniv) GetBoundFlagValue(key string) (any, bool) {
-	flag, exists := c.GetBoundFlag(key)
+func (v *Miniv) GetBoundFlagValue(key string) (any, bool) {
+	flag, exists := v.GetBoundFlag(key)
 	if exists && flag.Changed {
 		return flag.Value, true
 	}
@@ -199,14 +200,14 @@ func (v *Miniv) AutomaticEnv() {
 
 // SetEnvVar sets the environment variable name for a key.
 // If the key already exists, it overwrites the existing env var name.
-func (c *Miniv) SetEnvVar(key string, envVar string) {
+func (v *Miniv) SetEnvVar(key string, envVar string) {
 	var transformedKey string
-	if len(c.envPrefix) > 0 {
-		transformedKey = strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%s_%s", c.envPrefix, key), ".", "_"))
+	if len(v.envPrefix) > 0 {
+		transformedKey = strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%s_%s", v.envPrefix, key), ".", "_"))
 	} else {
 		transformedKey = strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 	}
-	c.envVars[transformedKey] = envVar
+	v.envVars[transformedKey] = envVar
 }
 
 // GetEnvVar returns the environment variable value for a key.
@@ -214,16 +215,16 @@ func (c *Miniv) SetEnvVar(key string, envVar string) {
 // If AutomaticEnv is enabled, it first checks for the automatically generated
 // envvar name.
 // If not found, it checks for an explicitly set env var name in the envVars map.
-func (c *Miniv) GetEnvVar(key string) (val string, exists bool) {
-	if c.automaticEnvApplied {
+func (v *Miniv) GetEnvVar(key string) (val string, exists bool) {
+	if v.automaticEnvApplied {
 		// Check for automatically generated env var name.
 		envKey := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
-		if len(c.envPrefix) > 0 {
-			envKey = c.envPrefix + "_" + envKey
+		if len(v.envPrefix) > 0 {
+			envKey = v.envPrefix + "_" + envKey
 		}
 		val, exists = os.LookupEnv(envKey)
 		if exists {
-			if !c.emptyEnvVarValid && val == "" {
+			if !v.emptyEnvVarValid && val == "" {
 				return "", false
 			}
 			return
@@ -231,14 +232,14 @@ func (c *Miniv) GetEnvVar(key string) (val string, exists bool) {
 	}
 	// Check for explicitly set env var name in the envVars map.
 	var transformedKey string
-	if len(c.envPrefix) > 0 {
-		transformedKey = strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%s_%s", c.envPrefix, key), ".", "_"))
+	if len(v.envPrefix) > 0 {
+		transformedKey = strings.ToUpper(strings.ReplaceAll(fmt.Sprintf("%s_%s", v.envPrefix, key), ".", "_"))
 	} else {
 		transformedKey = strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 	}
-	if envVarName, exists := c.envVars[transformedKey]; exists {
+	if envVarName, exists := v.envVars[transformedKey]; exists {
 		val, exists = os.LookupEnv(envVarName)
-		if exists && !c.emptyEnvVarValid && val == "" {
+		if exists && !v.emptyEnvVarValid && val == "" {
 			return "", false
 		}
 		return val, exists
@@ -248,14 +249,14 @@ func (c *Miniv) GetEnvVar(key string) (val string, exists bool) {
 
 // SetDefault sets the default value for a key.
 // If the key already exists, it overwrites the existing default.
-func (c *Miniv) SetDefault(key string, value any) {
-	c.defaults[key] = value
+func (v *Miniv) SetDefault(key string, value any) {
+	v.defaults[key] = value
 }
 
 // GetDefault returns the default value for a key.
 // If the key does not exist, returns nil and false.
-func (c *Miniv) GetDefault(key string) (any, bool) {
-	val, exists := c.defaults[key]
+func (v *Miniv) GetDefault(key string) (any, bool) {
+	val, exists := v.defaults[key]
 	return val, exists
 }
 
@@ -264,11 +265,11 @@ func (c *Miniv) GetDefault(key string) (any, bool) {
 // If the key exists in cfgValues, returns that value.
 // Otherwise, checks flatCfgValues for the key.
 // If the key does not exist, returns nil and false.
-func (c *Miniv) GetConfigValue(key string) (any, bool) {
-	if val, exists := c.cfgValues[key]; exists {
+func (v *Miniv) GetConfigValue(key string) (any, bool) {
+	if val, exists := v.cfgValues[key]; exists {
 		return val, exists
 	}
-	val, exists := c.flatCfgValues[key]
+	val, exists := v.flatCfgValues[key]
 	if exists {
 		return val, exists
 	}
@@ -345,20 +346,20 @@ func (c *Miniv) flattenConfigValues(prefix string, values map[string]any, flatMa
 // 4. Flattened config file values via flatCfgValues
 // 5. Default values via GetDefault
 // If the key does not exist in any of these, returns nil and false.
-func (c *Miniv) Get(key string) (any, bool) {
-	if val, exists := c.setvalues[key]; exists {
+func (v *Miniv) Get(key string) (any, bool) {
+	if val, exists := v.setvalues[key]; exists {
 		return val, exists
 	}
-	if val, exists := c.GetBoundFlagValue(key); exists {
+	if val, exists := v.GetBoundFlagValue(key); exists {
 		return val, exists
 	}
-	if val, exists := c.GetEnvVar(key); exists {
+	if val, exists := v.GetEnvVar(key); exists {
 		return val, exists
 	}
-	if val, exists := c.flatCfgValues[key]; exists {
+	if val, exists := v.flatCfgValues[key]; exists {
 		return val, exists
 	}
-	if val, exists := c.defaults[key]; exists {
+	if val, exists := v.defaults[key]; exists {
 		return val, exists
 	}
 	return nil, false
@@ -366,117 +367,130 @@ func (c *Miniv) Get(key string) (any, bool) {
 
 // GetString returns the string value for a key.
 // If the key does not exist or is not a string, returns an empty string.
-func (c *Miniv) GetString(key string) string {
-	val, _ := c.Get(key)
+func (v *Miniv) GetString(key string) string {
+	val, _ := v.Get(key)
 	return cast.ToString(val)
 }
 
 // GetStringSlice returns the string slice value for a key.
 // If the key does not exist or is not a string slice, returns an empty slice.
-func (c *Miniv) GetStringSlice(key string) []string {
-	val, _ := c.Get(key)
+func (v *Miniv) GetStringSlice(key string) []string {
+	val, _ := v.Get(key)
 	return cast.ToStringSlice(val)
 }
 
 // GetInt returns the int value for a key.
 // If the key does not exist or is not an int, returns 0.
-func (c *Miniv) GetInt64(key string) int64 {
-	val, _ := c.Get(key)
+func (v *Miniv) GetInt64(key string) int64 {
+	val, _ := v.Get(key)
 	return cast.ToInt64(val)
 }
 
 // GetInt64Slice returns the int64 slice value for a key.
 // If the key does not exist or is not an int64 slice, returns an empty slice.
-func (c *Miniv) GetInt64Slice(key string) []int64 {
-	val, _ := c.Get(key)
+func (v *Miniv) GetInt64Slice(key string) []int64 {
+	val, _ := v.Get(key)
 	return cast.ToInt64Slice(val)
 }
 
 // GetFloat64 returns the float64 value for a key.
 // If the key does not exist or is not a float64, returns 0.0.
-func (c *Miniv) GetFloat64(key string) float64 {
-	val, _ := c.Get(key)
+func (v *Miniv) GetFloat64(key string) float64 {
+	val, _ := v.Get(key)
 	return cast.ToFloat64(val)
 }
 
 // GetFloat64Slice returns the float64 slice value for a key.
 // If the key does not exist or is not a float64 slice, returns an empty slice.
-func (c *Miniv) GetFloat64Slice(key string) []float64 {
-	val, _ := c.Get(key)
+func (v *Miniv) GetFloat64Slice(key string) []float64 {
+	val, _ := v.Get(key)
 	return cast.ToFloat64Slice(val)
 }
 
 // GetBool returns the boolean value for a key.
 // If the key does not exist or is not a boolean, returns false.
-func (c *Miniv) GetBool(key string) bool {
-	val, _ := c.Get(key)
+func (v *Miniv) GetBool(key string) bool {
+	val, _ := v.Get(key)
 	return cast.ToBool(val)
 }
 
 // GetBoolSlice returns the boolean slice value for a key.
 // If the key does not exist or is not a boolean slice, returns an empty slice.
-func (c *Miniv) GetBoolSlice(key string) []bool {
-	val, _ := c.Get(key)
+func (v *Miniv) GetBoolSlice(key string) []bool {
+	val, _ := v.Get(key)
 	return cast.ToBoolSlice(val)
 }
 
 // ConfigFileUsed returns the full path to the configuration file used.
 // It combines configPath and configFile.
-func (c *Miniv) ConfigFileUsed() string {
-	return filepath.Clean(filepath.Join(c.configPath, c.configFile))
+func (v *Miniv) ConfigFileUsed() string {
+	return filepath.Clean(filepath.Join(v.configPath, v.configFile))
+}
+
+// ReadConfig reads a configuration file, setting existing keys to nil if the
+// key does not exist in the file.
+func (v *Miniv) ReadConfig(in io.Reader) error {
+	config := make(map[string]any)
+	d := toml.NewDecoder(in)
+	if err := d.Decode(&config); err != nil {
+		return fmt.Errorf("failed to decode config: %w", err)
+	}
+	v.cfgValues = config
+	v.flattenConfigValues("", v.cfgValues, v.flatCfgValues)
+	return nil
 }
 
 // ReadInConfig reads the configuration from the TOML file
 // specified by configPath and configFile.
 // It populates the cfgValues and flatCfgValues maps.
-func (c *Miniv) ReadInConfig() error {
-	if filepath.Ext(c.configFile) != ".toml" {
+func (v *Miniv) ReadInConfig() error {
+	if filepath.Ext(v.configFile) != ".toml" {
 		return fmt.Errorf("invalid config file extension")
 	}
-	cfgIn, err := os.Open(c.ConfigFileUsed())
+	cfgIn, err := os.Open(v.ConfigFileUsed())
 	if err != nil {
 		return fmt.Errorf("failed to open config file: %w", err)
 	}
 	defer cfgIn.Close()
 	d := toml.NewDecoder(cfgIn)
-	if err = d.Decode(&c.cfgValues); err != nil {
+	if err = d.Decode(&v.cfgValues); err != nil {
 		return fmt.Errorf("failed to decode config file: %w", err)
 	}
-	c.flattenConfigValues("", c.cfgValues, c.flatCfgValues)
+	v.flattenConfigValues("", v.cfgValues, v.flatCfgValues)
 	return nil
 }
 
 // WriteConfig writes the configuration to the TOML file specified by
 // configPath and configFile.
 // It overwrites any existing file.
-func (c *Miniv) WriteConfig() error {
-	cfgFile := c.ConfigFileUsed()
+func (v *Miniv) WriteConfig() error {
+	cfgFile := v.ConfigFileUsed()
 	cfgOut, err := os.Create(cfgFile)
 	if err != nil {
 		return fmt.Errorf("failed to create the config file: %w", err)
 	}
 	defer cfgOut.Close()
 	enc := toml.NewEncoder(cfgOut)
-	return enc.Encode(&c.cfgValues)
+	return enc.Encode(&v.cfgValues)
 }
 
 // WriteConfigAs writes the configuration to the specified TOML file.
 // It overwrites any existing file.
-func (c *Miniv) WriteConfigAs(cfgFile string) error {
+func (v *Miniv) WriteConfigAs(cfgFile string) error {
 	cfgOut, err := os.Create(cfgFile)
 	if err != nil {
 		return fmt.Errorf("failed to create the config file: %w", err)
 	}
 	defer cfgOut.Close()
 	enc := toml.NewEncoder(cfgOut)
-	return enc.Encode(&c.cfgValues)
+	return enc.Encode(&v.cfgValues)
 }
 
 // SafeWriteConfig writes the configuration to the TOML file specified by
 // configPath and configFile only if the file does not already exist.
 // It prevents overwriting an existing configuration file.
-func (c *Miniv) SafeWriteConfig() error {
-	cfgFile := c.ConfigFileUsed()
+func (v *Miniv) SafeWriteConfig() error {
+	cfgFile := v.ConfigFileUsed()
 	_, err := os.Stat(cfgFile)
 	if err == nil {
 		return fmt.Errorf("%s already exists.  Not overwriting", cfgFile)
@@ -487,13 +501,13 @@ func (c *Miniv) SafeWriteConfig() error {
 	}
 	defer cfgOut.Close()
 	enc := toml.NewEncoder(cfgOut)
-	return enc.Encode(&c.cfgValues)
+	return enc.Encode(&v.cfgValues)
 }
 
 // SafeWriteConfigAs writes the configuration to the specified TOML file only
 // if the file does not already exist.
 // It prevents overwriting an existing configuration file.
-func (c *Miniv) SafeWriteConfigAs(cfgFile string) error {
+func (v *Miniv) SafeWriteConfigAs(cfgFile string) error {
 	_, err := os.Stat(cfgFile)
 	if err == nil {
 		return fmt.Errorf("%s already exists.  Not overwriting", cfgFile)
@@ -504,5 +518,5 @@ func (c *Miniv) SafeWriteConfigAs(cfgFile string) error {
 	}
 	defer cfgOut.Close()
 	enc := toml.NewEncoder(cfgOut)
-	return enc.Encode(&c.cfgValues)
+	return enc.Encode(&v.cfgValues)
 }
