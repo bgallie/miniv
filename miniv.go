@@ -317,6 +317,7 @@ func (c *Miniv) flattenConfigValues(prefix string, values map[string]any, flatMa
 		case map[string]any:
 			c.flattenConfigValues(k, v, flatMap)
 		case []any:
+			flatMap[k] = v
 			for i, item := range v {
 				itemKey := fmt.Sprintf("%s.%d", k, i)
 				switch item := item.(type) {
