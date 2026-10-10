@@ -466,13 +466,7 @@ func (v *Miniv) ReadInConfig() error {
 // It overwrites any existing file.
 func (v *Miniv) WriteConfig() error {
 	cfgFile := v.ConfigFileUsed()
-	cfgOut, err := os.Create(cfgFile)
-	if err != nil {
-		return fmt.Errorf("failed to create the config file: %w", err)
-	}
-	defer cfgOut.Close()
-	enc := toml.NewEncoder(cfgOut)
-	return enc.Encode(&v.cfgValues)
+	return v.WriteConfigAs(cfgFile)
 }
 
 // WriteConfigAs writes the configuration to the specified TOML file.
@@ -492,17 +486,7 @@ func (v *Miniv) WriteConfigAs(cfgFile string) error {
 // It prevents overwriting an existing configuration file.
 func (v *Miniv) SafeWriteConfig() error {
 	cfgFile := v.ConfigFileUsed()
-	_, err := os.Stat(cfgFile)
-	if err == nil {
-		return fmt.Errorf("%s already exists.  Not overwriting", cfgFile)
-	}
-	cfgOut, err := os.Create(cfgFile)
-	if err != nil {
-		return fmt.Errorf("failed to create the config file: %w", err)
-	}
-	defer cfgOut.Close()
-	enc := toml.NewEncoder(cfgOut)
-	return enc.Encode(&v.cfgValues)
+	return v.SafeWriteConfigAs(cfgFile)
 }
 
 // SafeWriteConfigAs writes the configuration to the specified TOML file only
