@@ -380,7 +380,7 @@ func (v *Miniv) GetStringSlice(key string) []string {
 	return cast.ToStringSlice(val)
 }
 
-// GetInt returns the int value for a key.
+// GetInt64 returns the int64 value for a key.
 // If the key does not exist or is not an int, returns 0.
 func (v *Miniv) GetInt64(key string) int64 {
 	val, _ := v.Get(key)
